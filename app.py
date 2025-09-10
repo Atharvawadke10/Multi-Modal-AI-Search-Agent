@@ -1,6 +1,6 @@
 import streamlit as st
 from deep_translator import GoogleTranslator
-from openai import OpenAI
+from groq import Groq
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration, AutoProcessor, AutoModelForVision2Seq
 import torch
@@ -16,12 +16,9 @@ from streamlit_js_eval import streamlit_js_eval
 st.set_page_config(page_title="🤖 AI Search Assistant", layout="wide")
 st.title("🤖 AI Search Assistant")
 
-# Initialize OpenAI client
-
-OpenAi_KEY = "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"
-
-
-client = OpenAI(api_key=OpenAi_KEY)
+# ------------------------ Groq client ------------------------
+Groq_KEY = "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"
+client = Groq(api_key=Groq_KEY)
 
 # ------------------------ SESSION STATE ------------------------
 if "messages" not in st.session_state:
@@ -68,12 +65,15 @@ if module == "DATABOT":
 
     if user_query:
         with st.spinner("🧐Thinking..."):
-            # OpenAI response
             try:
+                # Store user message
                 st.session_state.messages.append({"role": "user", "content": user_query})
+
+                # Groq response (instead of OpenAI)
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=st.session_state.messages
+                    model="llama-3.3-70b-versatile",  # Strong Groq model
+                    messages=st.session_state.messages,
+                    max_tokens=800
                 )
                 answer = response.choices[0].message.content
                 st.session_state.messages.append({"role": "assistant", "content": answer})
@@ -90,7 +90,7 @@ if module == "DATABOT":
                         tts.save(temp_file.name)
                         st.audio(temp_file.name, format="audio/mp3")
             except Exception as e:
-                st.error(f"OpenAI API Error: {e}")
+                st.error(f"Groq API Error: {e}")
 
 # ------------------------ MUSIC PLAYER ------------------------
 elif module == "Music Player":
@@ -192,6 +192,7 @@ elif module == "Live Navigation":
         if not dest.strip():
             st.error("Enter a destination.")
             st.stop()
+        import urllib.parse
         dest_enc = urllib.parse.quote_plus(dest.strip())
         mode_enc = urllib.parse.quote_plus(travel_mode)
         if origin_param:
